@@ -1211,10 +1211,13 @@ function L51() {
   return (
     <>
       <p>
-        A <strong>constant</strong> is a value that never changes. Marking a
-        variable <code>const</code> tells the compiler to reject any attempt to
-        modify it — turning a potential bug into a compile error.
+        A <strong>constant</strong> is a value that cannot change once set. Marking
+        a variable <code>const</code> tells the compiler to reject any attempt to
+        modify it — turning a whole category of accidental bugs into compile errors
+        you catch before the program ever runs.
       </p>
+
+      <h2 id="declaring">Declaring a const variable</h2>
       <CodeBlock
         code={`const int maxPlayers { 4 };
 maxPlayers = 5;   // ERROR: cannot modify a const variable`}
@@ -1222,17 +1225,60 @@ maxPlayers = 5;   // ERROR: cannot modify a const variable`}
       />
       <Callout variant="rule" title="const must be initialized">
         A <code>const</code> variable has to be given its value when defined —
-        there&rsquo;s no way to set it later, since it can never be assigned to.
+        there&rsquo;s no way to set it later, since it can never be assigned to.{" "}
+        <code>const int x;</code> is an error.
       </Callout>
+      <Callout variant="best-practice" title="Naming">
+        Some codebases name constants in ALL_CAPS, but a common modern convention
+        is to name them like ordinary variables. Consistency within a project
+        matters more than the specific choice.
+      </Callout>
+
+      <h2 id="params">const function parameters</h2>
+      <p>
+        You can also make a function parameter <code>const</code>. This is most
+        valuable with <em>reference</em> parameters (Chapter 12): it lets the
+        function read a large object without copying it, while promising not to
+        change the caller&rsquo;s data.
+      </p>
+      <CodeBlock
+        code={`void printName(const std::string& name)  // reads, never modifies
+{
+    std::cout << name << '\\n';
+}`}
+        lineNumbers={false}
+      />
+
+      <h2 id="runtime">Runtime vs. compile-time constants</h2>
+      <p>
+        A <code>const</code> variable&rsquo;s value simply can&rsquo;t change — but
+        it doesn&rsquo;t have to be known when you compile. A <code>const</code> can
+        be initialized from something computed while the program runs:
+      </p>
+      <CodeBlock
+        code={`int age {};
+std::cin >> age;
+const int startingAge { age };  // fixed once set, but only known at runtime`}
+        lineNumbers={false}
+      />
+      <p>
+        When a constant&rsquo;s value <em>is</em> knowable at compile time, a
+        stronger keyword, <code>constexpr</code>, expresses that — the subject of
+        lesson 5.3.
+      </p>
+
       <Callout variant="best-practice" title="Make everything const that can be">
         If a variable shouldn&rsquo;t change after initialization, mark it{" "}
-        <code>const</code>. It documents intent and lets the compiler catch
-        accidental modifications.
+        <code>const</code>. It documents intent, prevents accidental modification,
+        and often helps the compiler optimize.
       </Callout>
+
       <KeyTakeaways
         items={[
           "const makes a variable unmodifiable after initialization.",
           "A const variable must be initialized when defined.",
+          "const reference parameters let a function read large objects without copying or modifying them.",
+          "A const value can be computed at runtime; it just can't change afterward.",
           "Prefer const for any value that shouldn't change — it prevents bugs.",
         ]}
       />
@@ -1242,6 +1288,17 @@ maxPlayers = 5;   // ERROR: cannot modify a const variable`}
           ["It silently changes", "A compile error", "Undefined behavior", "It wraps around"],
           1,
           "The compiler rejects modifications of a const variable.",
+        )}
+        {Q(
+          "Can a const variable be initialized with a value read from the user at runtime?",
+          [
+            "No, const values must be known at compile time",
+            "Yes — it just can't change after it's initialized",
+            "Only if it's also constexpr",
+            "Only for integers",
+          ],
+          1,
+          "const means 'unchangeable', not 'known at compile time'; runtime initialization is fine.",
         )}
       </QuizSection>
     </>
@@ -1317,15 +1374,74 @@ constexpr int hoursPerWeek { daysPerWeek * 24 }; // computed at compile time`}
         A constant whose value is known and fixed at compile time. Prefer it over
         plain <code>const</code> for values that qualify.
       </Definition>
+
+      <h2 id="const-vs-constexpr">const vs. constexpr</h2>
+      <p>
+        Both make a value unchangeable. The difference is <em>when</em> the value is
+        known:
+      </p>
+      <table>
+        <thead>
+          <tr>
+            <th></th>
+            <th>Unchangeable?</th>
+            <th>Value known at compile time?</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>
+              <code>const</code>
+            </td>
+            <td>Yes</td>
+            <td>Not necessarily (may be runtime)</td>
+          </tr>
+          <tr>
+            <td>
+              <code>constexpr</code>
+            </td>
+            <td>Yes</td>
+            <td>Always — guaranteed by the compiler</td>
+          </tr>
+        </tbody>
+      </table>
+      <p>
+        A <code>constexpr</code> can only be initialized from other compile-time
+        values. Try to initialize one from runtime input and the program
+        won&rsquo;t compile — which is exactly the guarantee you want.
+      </p>
+
+      <h2 id="constexpr-functions">constexpr functions</h2>
+      <p>
+        Functions can be <code>constexpr</code> too, meaning they can run at
+        compile time when called with compile-time arguments. This lets you compute
+        constants with real logic instead of hard-coding them:
+      </p>
+      <CodeBlock
+        code={`constexpr int square(int n)
+{
+    return n * n;
+}
+
+constexpr int area { square(5) };  // computed at compile time → 25`}
+      />
+      <p>
+        The same function still works with runtime arguments — the compiler simply
+        evaluates it at compile time whenever it can.
+      </p>
+
       <Callout variant="best-practice" title="constexpr for compile-time values">
-        If a constant&rsquo;s value is a compile-time literal or computed from
-        other compile-time constants, make it <code>constexpr</code>. Use plain{" "}
+        If a constant&rsquo;s value is a compile-time literal or computed from other
+        compile-time constants, make it <code>constexpr</code>. Use plain{" "}
         <code>const</code> when the value is only known at run time.
       </Callout>
+
       <KeyTakeaways
         items={[
           "constexpr constants are evaluated by the compiler before the program runs.",
-          "They can be built from other compile-time constants.",
+          "Both const and constexpr are unchangeable; only constexpr guarantees a compile-time value.",
+          "A constexpr can only be built from other compile-time values.",
+          "constexpr functions can compute constants at compile time.",
           "Prefer constexpr over const when the value is known at compile time.",
         ]}
       />
@@ -1340,6 +1456,17 @@ constexpr int hoursPerWeek { daysPerWeek * 24 }; // computed at compile time`}
           ],
           1,
           "constexpr requires a compile-time-known value, enabling extra guarantees and optimizations.",
+        )}
+        {Q(
+          "What happens if you initialize a constexpr from a value read at runtime?",
+          [
+            "It works fine",
+            "It won't compile",
+            "It becomes a const automatically",
+            "Undefined behavior",
+          ],
+          1,
+          "A constexpr requires a compile-time-known initializer, so runtime input is a compile error.",
         )}
       </QuizSection>
     </>
@@ -1569,23 +1696,108 @@ function L61() {
   return (
     <>
       <p>
-        When an expression mixes operators, <strong>precedence</strong> decides
-        which run first and <strong>associativity</strong> breaks ties between
-        operators of equal precedence.
+        When an expression combines several operators, C++ needs rules to decide
+        the order of evaluation. <strong>Precedence</strong> decides which operator
+        runs first; <strong>associativity</strong> breaks ties between operators of
+        equal precedence.
       </p>
+
+      <h2 id="precedence">Precedence</h2>
       <CodeBlock
         code={`int r { 2 + 3 * 4 };   // * before + → 2 + 12 → 14
 int s { (2 + 3) * 4 }; // parentheses force + first → 20`}
       />
+      <p>
+        A rough ordering, from highest precedence to lowest, covering the operators
+        you know so far:
+      </p>
+      <table>
+        <thead>
+          <tr>
+            <th>Level</th>
+            <th>Operators</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Highest</td>
+            <td>
+              <code>()</code> grouping, function calls
+            </td>
+          </tr>
+          <tr>
+            <td></td>
+            <td>
+              unary <code>-</code>, <code>!</code>, <code>++</code>,{" "}
+              <code>--</code>
+            </td>
+          </tr>
+          <tr>
+            <td></td>
+            <td>
+              <code>*</code> <code>/</code> <code>%</code>
+            </td>
+          </tr>
+          <tr>
+            <td></td>
+            <td>
+              <code>+</code> <code>-</code>
+            </td>
+          </tr>
+          <tr>
+            <td></td>
+            <td>
+              <code>&lt;</code> <code>&lt;=</code> <code>&gt;</code>{" "}
+              <code>&gt;=</code>
+            </td>
+          </tr>
+          <tr>
+            <td></td>
+            <td>
+              <code>==</code> <code>!=</code>
+            </td>
+          </tr>
+          <tr>
+            <td></td>
+            <td>
+              <code>&amp;&amp;</code> then <code>||</code>
+            </td>
+          </tr>
+          <tr>
+            <td>Lowest</td>
+            <td>
+              <code>=</code> assignment
+            </td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h2 id="associativity">Associativity</h2>
+      <p>
+        When operators share a precedence level, associativity decides the
+        direction. Most binary operators are <strong>left-to-right</strong>:
+      </p>
+      <CodeBlock
+        code={`int x { 10 - 4 - 2 };  // left to right: (10 - 4) - 2 → 4, not 8`}
+        lineNumbers={false}
+      />
+      <p>
+        Assignment, by contrast, is right-to-left, which is why{" "}
+        <code>a = b = 5</code> assigns 5 to <code>b</code> first, then to{" "}
+        <code>a</code>.
+      </p>
+
       <Callout variant="best-practice" title="Parenthesize for clarity">
-        You don&rsquo;t need to memorize the whole precedence table. When an
-        expression could be misread, add parentheses — they make intent obvious to
-        every reader.
+        You don&rsquo;t need to memorize the whole table. When an expression could
+        be misread, add parentheses — they cost nothing and make your intent
+        obvious to every reader (and to yourself, six months later).
       </Callout>
+
       <KeyTakeaways
         items={[
-          "Precedence determines which operators evaluate first.",
-          "Associativity resolves ties between equal-precedence operators.",
+          "Precedence determines which operators evaluate first (e.g. * before +).",
+          "Associativity resolves ties between equal-precedence operators — mostly left to right.",
+          "Assignment is right-to-left and has very low precedence.",
           "Use parentheses to make evaluation order explicit and readable.",
         ]}
       />
@@ -1595,6 +1807,12 @@ int s { (2 + 3) * 4 }; // parentheses force + first → 20`}
           ["20", "14", "24", "9"],
           1,
           "Multiplication has higher precedence, so 3*4 runs first: 2 + 12 = 14.",
+        )}
+        {Q(
+          "What does 10 - 4 - 2 evaluate to?",
+          ["8", "4", "12", "6"],
+          1,
+          "Subtraction is left-associative: (10 - 4) - 2 = 4.",
         )}
       </QuizSection>
     </>
@@ -1627,12 +1845,33 @@ bool isEven { (n % 2) == 0 };  // true when n divides evenly by 2`}
         If both operands are integers, division discards the fractional part. Make
         one operand a floating-point value to get a fractional result.
       </Callout>
+      <Callout variant="warning" title="Never divide by zero">
+        Integer division or modulo by zero is undefined behavior and typically
+        crashes. Guard with a check when the divisor could be zero.
+      </Callout>
+
+      <h2 id="compound">Compound assignment operators</h2>
+      <p>
+        Applying an operation to a variable and storing the result back into it is
+        so common that C++ provides shorthand <strong>compound assignment</strong>{" "}
+        operators:
+      </p>
+      <CodeBlock
+        code={`int x { 10 };
+x += 5;   // same as x = x + 5   → 15
+x -= 3;   // x = x - 3           → 12
+x *= 2;   // x = x * 2           → 24
+x /= 4;   // x = x / 4           → 6
+x %= 4;   // x = x % 4           → 2`}
+      />
+
       <KeyTakeaways
         items={[
           "Arithmetic operators: + - * / and % (remainder).",
-          "Integer division truncates: 7 / 2 is 3.",
-          "Make an operand a double to get a fractional result.",
-          "% gives the remainder — great for divisibility checks.",
+          "Integer division truncates: 7 / 2 is 3 — make an operand a double for a fractional result.",
+          "% gives the remainder — great for divisibility checks like n % 2 == 0.",
+          "Dividing (or taking modulo) by zero is undefined behavior.",
+          "Compound operators (+=, -=, *=, /=, %=) update a variable in place.",
         ]}
       />
       <QuizSection>
@@ -1641,6 +1880,18 @@ bool isEven { (n % 2) == 0 };  // true when n divides evenly by 2`}
           ["3.5", "3", "4", "1"],
           1,
           "Both operands are ints, so the result is integer division: 3 (the .5 is dropped).",
+        )}
+        {Q(
+          "What is 17 % 5?",
+          ["3", "2", "3.4", "12"],
+          1,
+          "17 divided by 5 is 3 remainder 2, so the modulo result is 2.",
+        )}
+        {Q(
+          "After int x{8}; x /= 2; what is x?",
+          ["16", "4", "6", "2"],
+          1,
+          "x /= 2 is x = x / 2, so 8 / 2 = 4.",
         )}
       </QuizSection>
     </>
@@ -1811,14 +2062,39 @@ function L71() {
   return (
     <>
       <p>
-        You&rsquo;ve met local variables. Their opposite is a{" "}
-        <strong>global variable</strong>, defined outside any function and visible
-        throughout the file. Globals are occasionally useful but easy to misuse.
+        Where a name is usable is its <strong>scope</strong>. You&rsquo;ve been
+        writing <strong>local variables</strong> — declared inside a function,
+        visible only there. Their counterpart is the{" "}
+        <strong>global variable</strong>, declared outside every function and
+        visible throughout the file.
       </p>
+
+      <h2 id="local">Local and block scope</h2>
+      <p>
+        A local variable&rsquo;s scope runs from its declaration to the end of the
+        enclosing <code>{`{ }`}</code> block. Every pair of braces introduces a new
+        nested scope:
+      </p>
+      <CodeBlock
+        code={`int main()
+{
+    int x { 1 };        // visible for the rest of main
+
+    {
+        int y { 2 };    // visible only inside these inner braces
+        std::cout << x << y; // both in scope here
+    }                   // y is destroyed here
+
+    // std::cout << y;  // ERROR: y is out of scope
+    return 0;
+}`}
+      />
+
+      <h2 id="global">Global variables</h2>
       <CodeBlock
         code={`#include <iostream>
 
-int g_score { 0 };   // global variable (g_ prefix by convention)
+int g_score { 0 };   // global (g_ prefix by convention)
 
 void addPoint() { ++g_score; }
 
@@ -1826,21 +2102,37 @@ int main()
 {
     addPoint();
     addPoint();
-    std::cout << g_score << '\\n'; // 2 — both functions share it
+    std::cout << g_score << '\\n'; // 2 — both functions share the one variable
     return 0;
 }`}
         output={`2`}
       />
+      <p>
+        Globals live for the entire duration of the program and are shared by all
+        code in the file. That reach is exactly what makes them risky.
+      </p>
+
+      <h2 id="shadowing">Shadowing</h2>
+      <p>
+        If a local variable has the same name as a global (or an outer-block
+        variable), the inner name <strong>shadows</strong> the outer one within its
+        scope. This is legal but confusing — avoid reusing names across scopes.
+      </p>
+
       <Callout variant="warning" title="Prefer local variables">
-        Global variables can be changed from anywhere, which makes bugs hard to
-        trace and code hard to reason about. Favor passing data through parameters
-        and return values instead.
+        Because a global can be read or changed from anywhere, tracking down which
+        code altered it becomes painful as programs grow. Favor passing data through
+        parameters and return values, keeping each variable&rsquo;s scope as small
+        as practical.
       </Callout>
+
       <KeyTakeaways
         items={[
-          "Global variables are defined outside functions and visible file-wide.",
-          "They're conventionally prefixed (e.g. g_) to stand out.",
-          "Because any code can change them, prefer local variables and parameters.",
+          "Scope is the region of code where a name can be used.",
+          "Local variables are visible from their declaration to the end of their block; nested braces create nested scopes.",
+          "Global variables live outside all functions, last the whole program, and are shared file-wide.",
+          "An inner name with the same identifier shadows an outer one — avoid it.",
+          "Prefer local variables and the smallest scope that does the job.",
         ]}
       />
       <QuizSection>
@@ -1855,6 +2147,17 @@ int main()
           1,
           "Uncontrolled access from anywhere makes global state a common source of hard-to-find bugs.",
         )}
+        {Q(
+          "When does a local variable declared inside a { } block get destroyed?",
+          [
+            "When the program ends",
+            "At the closing brace of its block",
+            "When it's next read",
+            "Never",
+          ],
+          1,
+          "A local variable's lifetime ends at the end of the block that declares it.",
+        )}
       </QuizSection>
     </>
   );
@@ -1864,32 +2167,63 @@ function L72() {
   return (
     <>
       <p>
-        You can define your own <strong>namespaces</strong> to group related code
-        and prevent your names from colliding with other libraries&rsquo; names.
+        As programs and libraries grow, two pieces of code can accidentally define
+        the same name — a <strong>naming collision</strong> that stops the program
+        from linking. A <strong>namespace</strong> is a named region that groups
+        identifiers so the same name can live in different namespaces without
+        conflict.
       </p>
+
+      <h2 id="defining">Defining and using a namespace</h2>
       <CodeBlock
-        code={`namespace geometry {
+        code={`#include <iostream>
+
+namespace geometry {
     constexpr double pi { 3.14159 };
     double circleArea(double r) { return pi * r * r; }
 }
 
 int main()
 {
-    std::cout << geometry::circleArea(2.0) << '\\n';
+    std::cout << geometry::circleArea(2.0) << '\\n'; // qualify with the name
     return 0;
 }`}
         output={`12.5664`}
       />
+      <p>
+        You reach a name inside a namespace with the{" "}
+        <strong>scope resolution operator</strong> <code>::</code> —{" "}
+        <code>geometry::pi</code>. This is exactly the mechanism behind{" "}
+        <code>std::cout</code>: <code>cout</code> lives in the standard
+        library&rsquo;s <code>std</code> namespace.
+      </p>
+
+      <h2 id="collisions">Why they exist</h2>
+      <p>
+        Suppose two libraries each define a function <code>log()</code> — one for
+        logging messages, one for logarithms. Put each in its own namespace and{" "}
+        <code>logging::log()</code> and <code>math::log()</code> coexist peacefully.
+      </p>
+
+      <Callout variant="warning" title="Avoid 'using namespace std;'">
+        You may see <code>using namespace std;</code> in tutorials. It dumps every
+        standard-library name into your scope, re-introducing the very collisions
+        namespaces exist to prevent. Prefer typing the <code>std::</code> prefix
+        explicitly.
+      </Callout>
       <Callout variant="best-practice" title="Group a library's code in a namespace">
         When you write a set of related functions and constants meant to be used
-        together, wrap them in a namespace. Callers then access them through a
-        clear, collision-free prefix.
+        together, wrap them in a namespace so callers access them through a clear,
+        collision-free prefix.
       </Callout>
+
       <KeyTakeaways
         items={[
-          "You can define custom namespaces to organize related code.",
-          "They keep your identifiers from colliding with others'.",
-          "Access members with the :: scope resolution operator.",
+          "A namespace groups identifiers so the same name can exist in different namespaces.",
+          "Access members with the :: scope resolution operator (geometry::pi).",
+          "The standard library lives in namespace std — hence std::cout.",
+          "Namespaces prevent naming collisions between libraries.",
+          "Avoid 'using namespace std;'; prefer explicit std:: qualification.",
         ]}
       />
       <QuizSection>
@@ -1898,6 +2232,17 @@ int main()
           ["circleArea()", "geometry.circleArea()", "geometry::circleArea()", "geometry->circleArea()"],
           2,
           "Use the scope resolution operator: geometry::circleArea().",
+        )}
+        {Q(
+          "What problem do namespaces primarily solve?",
+          [
+            "Slow programs",
+            "Naming collisions between different pieces of code",
+            "Memory leaks",
+            "Integer overflow",
+          ],
+          1,
+          "Namespaces let identically-named identifiers coexist, preventing collisions.",
         )}
       </QuizSection>
     </>
@@ -1908,40 +2253,91 @@ function L73() {
   return (
     <>
       <p>
-        Two more properties round out how identifiers behave:{" "}
-        <strong>duration</strong> (how long an object lives) and{" "}
-        <strong>linkage</strong> (whether a name can be shared across files).
+        Two more properties round out how identifiers behave.{" "}
+        <strong>Duration</strong> describes <em>when</em> an object is created and
+        destroyed; <strong>linkage</strong> describes whether a name refers to the
+        same entity across multiple files.
       </p>
+
+      <h2 id="duration">Duration</h2>
+      <p>
+        Most variables you&rsquo;ve written have <strong>automatic
+        duration</strong>: created when execution reaches them, destroyed at the end
+        of their block. Globals have <strong>static duration</strong>: they exist
+        for the entire run of the program.
+      </p>
+
       <h2 id="static-local">static local variables</h2>
       <p>
-        A local variable marked <code>static</code> keeps its value between calls
-        instead of being recreated each time:
+        Applying <code>static</code> to a <em>local</em> variable gives it static
+        duration — it&rsquo;s initialized once and keeps its value between calls,
+        rather than being recreated each time:
       </p>
       <CodeBlock
-        code={`void counter()
+        code={`#include <iostream>
+
+void counter()
 {
-    static int count { 0 };  // initialized once, persists
+    static int count { 0 };  // initialized once; persists between calls
     ++count;
     std::cout << count << ' ';
 }
-// Calling counter() three times prints: 1 2 3`}
+
+int main()
+{
+    counter();
+    counter();
+    counter();
+    return 0;
+}`}
+        output={`1 2 3`}
       />
+
       <h2 id="linkage">Internal vs. external linkage</h2>
-      <ul>
-        <li>
-          <strong>Internal linkage</strong> (<code>static</code> at file scope, or{" "}
-          <code>const</code> globals) — the name is private to its file.
-        </li>
-        <li>
-          <strong>External linkage</strong> (normal functions, <code>extern</code>{" "}
-          globals) — the name can be used from other files via a declaration.
-        </li>
-      </ul>
+      <table>
+        <thead>
+          <tr>
+            <th>Linkage</th>
+            <th>Meaning</th>
+            <th>Examples</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Internal</td>
+            <td>Name is private to its file</td>
+            <td>
+              <code>static</code> globals, <code>const</code> globals
+            </td>
+          </tr>
+          <tr>
+            <td>External</td>
+            <td>Name can be used from other files</td>
+            <td>
+              functions, <code>extern</code> globals
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      <p>
+        To share a global across files, define it in one file and declare it{" "}
+        <code>extern</code> in the others:
+      </p>
+      <CodeBlock
+        code={`// file1.cpp
+int g_version { 2 };          // definition (external linkage)
+
+// file2.cpp
+extern int g_version;         // declaration — refers to the one in file1
+`}
+      />
+
       <KeyTakeaways
         items={[
-          "Duration is how long an object exists; linkage is whether its name is shareable across files.",
+          "Duration is when an object lives; linkage is whether its name is shareable across files.",
+          "Local variables have automatic duration; globals have static duration.",
           "A static local variable persists across calls, initialized only once.",
-          "Internal linkage keeps a name file-private; external linkage lets other files use it.",
+          "Internal linkage keeps a name file-private; external linkage lets other files use it via extern.",
         ]}
       />
       <QuizSection>
@@ -1955,6 +2351,12 @@ function L73() {
           ],
           1,
           "A static local is initialized once and retains its value between calls.",
+        )}
+        {Q(
+          "Which keyword declares a global defined in another file so you can use it here?",
+          ["static", "extern", "const", "inline"],
+          1,
+          "extern declares a name with external linkage that's defined elsewhere.",
         )}
       </QuizSection>
     </>
@@ -2392,22 +2794,53 @@ function L85() {
   return (
     <>
       <p>
-        Two statements fine-tune loops: <code>break</code> exits a loop
-        immediately, and <code>continue</code> skips to the next iteration.
-        We&rsquo;ll also generate random numbers.
+        Two statements let you alter a loop&rsquo;s normal flow from the inside:{" "}
+        <code>break</code> exits the loop entirely, and <code>continue</code> skips
+        to the next iteration. We&rsquo;ll then use a loop to generate random
+        numbers.
       </p>
+
+      <h2 id="break-continue">break and continue</h2>
       <CodeBlock
         code={`for (int i { 0 }; i < 10; ++i)
 {
-    if (i == 5) break;      // stop entirely at 5
-    if (i % 2 == 0) continue; // skip even numbers
+    if (i == 5) break;        // stop the whole loop when i reaches 5
+    if (i % 2 == 0) continue; // skip the rest of this pass for even i
     std::cout << i << ' ';    // prints: 1 3
 }`}
+        output={`1 3`}
       />
-      <h2 id="random">Random numbers</h2>
       <p>
-        Modern C++ uses the <code>&lt;random&gt;</code> library. A common,
-        beginner-friendly approach uses the Mersenne Twister engine:
+        <code>break</code> jumps out below the loop; <code>continue</code> jumps
+        back up to the loop&rsquo;s update/condition. In a <code>for</code> loop,{" "}
+        <code>continue</code> still runs the update (<code>++i</code>), so it
+        won&rsquo;t spin forever — but in a <code>while</code> loop you must make
+        sure the counter still advances before the <code>continue</code>.
+      </p>
+
+      <h2 id="while-true">The while(true) + break pattern</h2>
+      <p>
+        A common idiom is a deliberately infinite loop that <code>break</code>s when
+        a condition inside it is met — perfect for &ldquo;keep going until the user
+        quits&rdquo;:
+      </p>
+      <CodeBlock
+        code={`while (true)
+{
+    std::cout << "Enter a command (q to quit): ";
+    char cmd {};
+    std::cin >> cmd;
+    if (cmd == 'q') break;   // the only exit
+    // ... handle the command ...
+}`}
+      />
+
+      <h2 id="random">Generating random numbers</h2>
+      <p>
+        Modern C++ produces randomness with the <code>&lt;random&gt;</code>{" "}
+        library. Two pieces work together: a <strong>random engine</strong>{" "}
+        (produces raw random bits) and a <strong>distribution</strong> (maps them
+        into the range you want).
       </p>
       <CodeBlock
         code={`#include <random>
@@ -2415,17 +2848,27 @@ function L85() {
 
 int main()
 {
-    std::mt19937 gen { std::random_device{}() };     // seeded engine
-    std::uniform_int_distribution roll { 1, 6 };     // like a die
-    std::cout << roll(gen) << '\\n';                  // a random 1..6
+    std::mt19937 gen { std::random_device{}() };   // engine, seeded once
+    std::uniform_int_distribution roll { 1, 6 };   // like a six-sided die
+
+    for (int i { 0 }; i < 3; ++i)
+        std::cout << roll(gen) << ' ';             // three random rolls 1-6
     return 0;
 }`}
       />
+      <Callout variant="best-practice" title="Seed the engine once">
+        Create and seed the engine a single time (e.g. at the start of{" "}
+        <code>main</code>), then reuse it. Re-seeding on every call — especially
+        from a low-resolution clock — can produce repeated or predictable values.
+      </Callout>
+
       <KeyTakeaways
         items={[
           "break exits the enclosing loop immediately.",
           "continue skips the rest of the current iteration and moves on.",
-          "Use the <random> library (e.g. std::mt19937 + a distribution) for randomness.",
+          "while(true) with a break inside is the idiom for 'loop until an event'.",
+          "Randomness comes from <random>: an engine (e.g. std::mt19937) plus a distribution.",
+          "Seed the engine once and reuse it, rather than re-seeding each call.",
         ]}
       />
       <QuizSection>
@@ -2440,6 +2883,17 @@ int main()
           1,
           "break leaves the loop entirely; continue jumps to the loop's next pass.",
         )}
+        {Q(
+          "In the <random> library, what does a distribution do?",
+          [
+            "Produces the raw random bits",
+            "Maps the engine's output into the range/shape you want",
+            "Seeds the engine",
+            "Prints the number",
+          ],
+          1,
+          "The engine generates raw randomness; the distribution shapes it into a desired range.",
+        )}
       </QuizSection>
     </>
   );
@@ -2451,9 +2905,17 @@ function L91() {
   return (
     <>
       <p>
-        <strong>Testing</strong> is how you gain confidence that code works.
-        Even informally, checking your functions against known inputs and expected
-        outputs catches bugs early.
+        Writing code that compiles is only half the job — you also need confidence
+        that it does the <em>right</em> thing. <strong>Testing</strong> is the
+        practice of checking a function against known inputs and their expected
+        outputs. Done early and often, it catches bugs while they&rsquo;re still
+        cheap to fix.
+      </p>
+
+      <h2 id="unit-testing">Informal unit testing</h2>
+      <p>
+        You don&rsquo;t need a framework to start. A <strong>unit test</strong> is
+        just a small check that a single piece of code behaves as expected:
       </p>
       <CodeBlock
         code={`#include <iostream>
@@ -2462,22 +2924,58 @@ int add(int a, int b) { return a + b; }
 
 int main()
 {
-    // Simple sanity checks
-    std::cout << (add(2, 3) == 5) << '\\n';   // expect 1
-    std::cout << (add(-1, 1) == 0) << '\\n';  // expect 1
+    // Each line should print 1 (true) if add is correct
+    std::cout << (add(2, 3) == 5) << '\\n';    // typical case
+    std::cout << (add(-1, 1) == 0) << '\\n';   // negatives
+    std::cout << (add(0, 0) == 0) << '\\n';    // zero edge case
     return 0;
 }`}
-        output={`1\n1`}
+        output={`1\n1\n1`}
       />
-      <Callout variant="best-practice" title="Test edge cases">
-        Beyond typical inputs, test the boundaries: zero, negative numbers, empty
-        strings, the largest value. Bugs love to hide at the edges.
+
+      <h2 id="cases">Choosing good test cases</h2>
+      <p>
+        Aim to cover different <em>kinds</em> of input, not just more of the same:
+      </p>
+      <table>
+        <thead>
+          <tr>
+            <th>Category</th>
+            <th>Examples to try</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Typical</td>
+            <td>ordinary, expected values</td>
+          </tr>
+          <tr>
+            <td>Boundaries</td>
+            <td>0, 1, the maximum, the minimum</td>
+          </tr>
+          <tr>
+            <td>Negatives / empties</td>
+            <td>negative numbers, empty strings, empty lists</td>
+          </tr>
+          <tr>
+            <td>Invalid</td>
+            <td>inputs the function should reject or handle</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <Callout variant="best-practice" title="Test as you build, not just at the end">
+        Testing each function right after you write it localizes bugs to the code
+        you just changed. It&rsquo;s far easier than hunting through a finished
+        program for where something went wrong.
       </Callout>
+
       <KeyTakeaways
         items={[
-          "Testing checks code against known inputs and expected outputs.",
-          "Even simple equality checks catch regressions early.",
-          "Always test edge cases — zero, negatives, empties, and extremes.",
+          "Testing checks code against known inputs and their expected outputs.",
+          "A unit test is a small check of a single function — no framework required.",
+          "Cover typical values, boundaries, negatives/empties, and invalid inputs.",
+          "Test as you build so bugs stay localized to recent changes.",
         ]}
       />
       <QuizSection>
@@ -2486,6 +2984,17 @@ int main()
           ["In comments", "At edge cases and boundaries", "In whitespace", "In the main function only"],
           1,
           "Boundary conditions (zero, extremes, empties) are classic bug locations, so test them.",
+        )}
+        {Q(
+          "What is a unit test?",
+          [
+            "A test of the whole program at once",
+            "A small check that one piece of code behaves as expected",
+            "A compiler feature",
+            "A type of loop",
+          ],
+          1,
+          "A unit test verifies a single unit (like a function) against expected results.",
         )}
       </QuizSection>
     </>
@@ -2630,15 +3139,24 @@ double getAverage(int sum, int count)
         lineNumbers={false}
       />
       <Callout variant="note" title="assert is for bugs, not user errors">
-        Use assertions to catch <em>programmer</em> mistakes (conditions that
-        should be impossible). Handle expected problems like bad user input with
-        normal error handling instead.
+        Use assertions to catch <em>programmer</em> mistakes — conditions that
+        should be impossible if your code is correct. Handle <em>expected</em>{" "}
+        problems like bad user input with normal error handling (lesson 9.3)
+        instead.
       </Callout>
+      <Callout variant="tip" title="Asserts disappear in release builds">
+        Defining the <code>NDEBUG</code> macro (which release builds typically do)
+        removes all <code>assert</code> checks, so they cost nothing in shipped
+        code. That&rsquo;s another reason to reserve them for debugging invariants,
+        not for logic your program relies on at runtime.
+      </Callout>
+
       <KeyTakeaways
         items={[
-          "assert checks a run-time condition and halts if it's false.",
+          "assert checks a run-time condition and halts, reporting the location, if it's false.",
           "static_assert checks a condition at compile time.",
           "Use assertions for 'impossible' programmer errors, not routine user errors.",
+          "Asserts are compiled out when NDEBUG is defined (release builds), so don't rely on their side effects.",
         ]}
       />
       <QuizSection>
@@ -2647,6 +3165,17 @@ double getAverage(int sum, int count)
           ["At run time", "At compile time", "Only in debug builds", "Never"],
           1,
           "static_assert is evaluated during compilation, failing the build if the condition is false.",
+        )}
+        {Q(
+          "What should you use assert for?",
+          [
+            "Validating user input",
+            "Catching 'impossible' programmer errors during development",
+            "Formatting output",
+            "Reading files",
+          ],
+          1,
+          "Assertions document and check invariants that should never be false; user input needs real error handling.",
         )}
       </QuizSection>
     </>
@@ -2659,24 +3188,54 @@ function L101() {
   return (
     <>
       <p>
-        <strong>Implicit type conversion</strong> is the compiler automatically
-        changing a value from one type to another when needed — for example,
-        promoting an <code>int</code> to a <code>double</code> in mixed arithmetic.
+        Often a value of one type is used where another is expected, and the
+        compiler quietly converts it for you. This is <strong>implicit type
+        conversion</strong>. It happens constantly — in assignments, function
+        arguments, and mixed-type arithmetic — usually so smoothly you don&rsquo;t
+        notice.
+      </p>
+
+      <h2 id="where">Where it happens</h2>
+      <CodeBlock
+        code={`double d { 10 };            // int 10 implicitly converted to 10.0
+double result { 5 / 2.0 };  // 5 converted to 5.0, then 5.0 / 2.0 → 2.5
+
+void print(double x);
+print(7);                   // int 7 converted to 7.0 for the parameter`}
+      />
+      <p>
+        In mixed arithmetic, the &ldquo;smaller&rdquo; operand is converted up to
+        match the other, which is why <code>5 / 2.0</code> becomes a floating-point
+        division.
+      </p>
+
+      <h2 id="promotion-narrowing">Safe and unsafe conversions</h2>
+      <p>
+        A <strong>promotion</strong> moves a value into a type that can hold every
+        possible value (<code>int → double</code>, <code>char → int</code>) and is
+        always safe. A <strong>narrowing conversion</strong> targets a type that
+        can&rsquo;t represent every value (<code>double → int</code>,{" "}
+        <code>int → char</code>) and may lose data or change the number.
       </p>
       <CodeBlock
-        code={`double result { 5 / 2.0 };  // 5 becomes 5.0 → 2.5
-double d { 10 };            // int 10 widened to 10.0`}
+        code={`int   a { 3.9 };            // narrowing → would drop .9 (brace init: error)
+int   b = 3.9;              // legacy: silently truncates to 3
+char  c = 1000;             // narrowing: value doesn't fit in a char`}
       />
+
       <Callout variant="warning" title="Narrowing conversions lose data">
-        Converting <code>double → int</code> or a large type to a smaller one can
-        silently lose information. Brace initialization turns such narrowing into a
-        compile error, which is why it&rsquo;s preferred.
+        Converting to a smaller or less precise type can silently corrupt a value.{" "}
+        <strong>Brace initialization</strong> turns such narrowing into a compile
+        error — one more reason to prefer <code>int x{`{...}`}</code> over{" "}
+        <code>int x = ...</code>.
       </Callout>
+
       <KeyTakeaways
         items={[
-          "The compiler converts types implicitly when required.",
-          "Widening (int → double) is safe; narrowing can lose data.",
-          "Brace initialization rejects narrowing conversions.",
+          "Implicit conversion happens automatically in assignments, arguments, and mixed arithmetic.",
+          "In mixed arithmetic the smaller operand converts up (e.g. int → double).",
+          "Promotions (to a larger type) are safe; narrowing conversions can lose data.",
+          "Brace initialization rejects narrowing conversions at compile time.",
         ]}
       />
       <QuizSection>
@@ -2685,6 +3244,12 @@ double d { 10 };            // int 10 widened to 10.0`}
           ["int 2", "double 2.5", "int 3", "double 2.0"],
           1,
           "2.0 is a double, so 5 is converted to 5.0 and the result is the double 2.5.",
+        )}
+        {Q(
+          "Which of these is a narrowing conversion?",
+          ["int → double", "char → int", "double → int", "short → long"],
+          2,
+          "double → int drops the fractional part and can't represent every value — that's narrowing.",
         )}
       </QuizSection>
     </>
@@ -2743,28 +3308,56 @@ function L103() {
   return (
     <>
       <p>
-        A <strong>type alias</strong> gives an existing type a new name, and{" "}
-        <code>auto</code> lets the compiler deduce a variable&rsquo;s type from its
-        initializer. Both reduce clutter.
+        Two features help you tame verbose type names. A <strong>type alias</strong>{" "}
+        gives an existing type a second, more meaningful name, and <code>auto</code>{" "}
+        lets the compiler deduce a variable&rsquo;s type from its initializer.
       </p>
-      <CodeBlock
-        code={`using Distance = double;   // alias: Distance means double
-Distance marathon { 42.195 };
 
-auto count { 5 };          // deduced as int
-auto pi { 3.14 };          // deduced as double
+      <h2 id="aliases">Type aliases</h2>
+      <CodeBlock
+        code={`using Distance = double;   // 'Distance' now means double
+
+Distance marathon { 42.195 };
+Distance sprint { 0.1 };`}
+      />
+      <p>
+        The alias doesn&rsquo;t create a new type — <code>Distance</code> is exactly{" "}
+        <code>double</code>. Its value is readability and flexibility: a
+        well-named alias documents intent, and if you later need to change the
+        underlying type you edit one line instead of many.
+      </p>
+
+      <h2 id="auto">Type deduction with auto</h2>
+      <CodeBlock
+        code={`auto count { 5 };                 // deduced as int
+auto pi { 3.14 };                 // deduced as double
 auto name { std::string{"Ada"} }; // deduced as std::string`}
       />
-      <Callout variant="best-practice" title="Use auto to avoid redundant type names">
-        <code>auto</code> is especially handy with long type names (like iterator
-        types you&rsquo;ll meet later). But keep code readable — don&rsquo;t use it
-        where the type isn&rsquo;t obvious from context.
+      <p>
+        <code>auto</code> requires an initializer — the compiler needs something to
+        deduce from. Its biggest payoff comes later with long standard-library type
+        names (like iterator types), where spelling out the type is tedious and
+        error-prone.
+      </p>
+
+      <Callout variant="best-practice" title="Use auto where the type is obvious">
+        <code>auto</code> shines when the type is clear from the right-hand side or
+        genuinely verbose. Avoid it where hiding the type would make the code harder
+        to understand at a glance.
       </Callout>
+      <Callout variant="note" title="auto drops const and references by default">
+        Plain <code>auto</code> deduces the underlying value type, stripping{" "}
+        <code>const</code> and reference qualifiers. When you need to keep them, you
+        write <code>const auto&amp;</code> — something you&rsquo;ll use often when
+        looping over containers.
+      </Callout>
+
       <KeyTakeaways
         items={[
-          "A type alias (using Name = Type;) gives a type a readable second name.",
-          "auto deduces a variable's type from its initializer.",
-          "Both cut down on verbose, repetitive type names — use them for clarity.",
+          "A type alias (using Name = Type;) gives a type a readable second name — not a new type.",
+          "auto deduces a variable's type from its initializer, which is therefore required.",
+          "auto is most valuable with long type names like iterators.",
+          "Plain auto drops const and references; use const auto& to keep them.",
         ]}
       />
       <QuizSection>
@@ -2773,6 +3366,28 @@ auto name { std::string{"Ada"} }; // deduced as std::string`}
           ["int", "double", "float", "auto"],
           1,
           "3.14 is a double literal, so x is deduced as double.",
+        )}
+        {Q(
+          "Does a type alias create a brand-new distinct type?",
+          [
+            "Yes, it's a new type",
+            "No — it's just another name for an existing type",
+            "Only for classes",
+            "Only with auto",
+          ],
+          1,
+          "An alias is a synonym; using Distance = double; makes Distance mean exactly double.",
+        )}
+        {Q(
+          "Why does auto require an initializer?",
+          [
+            "It doesn't",
+            "The compiler needs a value to deduce the type from",
+            "To make it constant",
+            "For performance",
+          ],
+          1,
+          "auto deduces the type from the initializer, so there must be one.",
         )}
       </QuizSection>
     </>
